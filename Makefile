@@ -21,7 +21,7 @@ $(OBJ_C) : %.o : %.c
 	$(CC) $(CC_FLAGS) -o $@ $<
 
 test:
-	lua54 test.lua
+	lua test.lua
 
 .PHONY : clean
 clean:
