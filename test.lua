@@ -18,8 +18,22 @@ local map = randplace.new(-10, -10, 20, 20)
 print(map:dighole(0, 0, 10, 10))
 print(map:dighole(-10, -10, 5, 5))
 for i = 1, 10 do
-print(map:randplace(5, 5))
+    print(map:randplace(5, 5))
 end
+
+local map = randplace.new(0, 0, 9, 9)
+print(map:dighole(3, 0, 3, 3))
+print(map:dighole(0, 3, 3, 3))
+print(map:dighole(3, 6, 3, 3))
+print(map:dighole(6, 3, 3, 3))
+for i = 1, 6 do
+    local x, y = map:randplace(3, 3)
+    print(x, y)
+    if x then
+        print(map:dighole(x, y, 3, 3))
+    end
+end
+
 -- for i = 1, 10 do
 --     local x, y = map:randplace(5, 5)
 --     map:dighole(x, y, 5, 5)
