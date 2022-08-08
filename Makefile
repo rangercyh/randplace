@@ -24,7 +24,7 @@ test:
 	lua54 test.lua
 
 gprof:
-	$(CC) -pg -I. -o gprof/gprof.exe gprof/main.c rand_place.c
+	$(CC) -pg -I. -o gprof/gprof.exe gprof/main.c rand_place.c intlist.c
 	gprof/gprof.exe
 	gprof gprof/gprof.exe | gprof/gprof2dot.py | dot -Tpng -o output.png
 
