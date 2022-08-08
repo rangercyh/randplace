@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 #include "rand_place.h"
 
 #define HOLE_NUM 99
@@ -106,11 +107,15 @@ void main() {
         { 20, 457, 20, 20 }
     };
     struct map *m = create_map(0, 0, 800, 550);
+    clock_t start, end;
+    start = clock();
     for (int i = 0; i < HOLE_NUM; i++) {
         printf("dig_hole(%d,%d,%d,%d) = %d\n", holes[i][0], holes[i][1],
             holes[i][2], holes[i][3],
             dig_hole(m, holes[i][0], holes[i][1], holes[i][2], holes[i][3]));
     }
-    printf("rand_place = %d\n", rand_place(m, 10, 10));
+    int r = rand_place(m, 10, 10);
+    end = clock();
+    printf("rand_place = %d %fms\n", r, (float)(end - start) * 1000 / CLOCKS_PER_SEC);
     destory(m);
 }

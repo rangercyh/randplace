@@ -289,13 +289,15 @@ print_left_area(struct head_left *hl) {
     DEBUG_PRINT("============== total_area %d %d\n", hl->total_area, hl->num);
     assert(hl->num == il_size(hl->l));
     for (int i = 0; i < hl->num; i++) {
-        DEBUG_PRINT("result x,y,w,h(%d,%d ====> %d,%d) (%d,%d)\n",
-            il_get(hl->l, i, enum_LDX),
-            il_get(hl->l, i, enum_LDY),
-            il_get(hl->l, i, enum_W),
-            il_get(hl->l, i, enum_H),
-            il_get(hl->l, i, enum_TYPE),
-            il_get(hl->l, i, enum_AREA));
+        if (il_get(hl->l, i, enum_MARK) == 0) {
+            DEBUG_PRINT("result x,y,w,h(%d,%d ====> %d,%d) (%d,%d)\n",
+                il_get(hl->l, i, enum_LDX),
+                il_get(hl->l, i, enum_LDY),
+                il_get(hl->l, i, enum_W),
+                il_get(hl->l, i, enum_H),
+                il_get(hl->l, i, enum_TYPE),
+                il_get(hl->l, i, enum_AREA));
+        }
     }
 }
 
@@ -307,90 +309,72 @@ release_resource(struct coord *x, struct coord *y, struct head_left *hl) {
     free(y);
 }
 
-// static inline int
-// check_area_same(struct left_area *l, struct left_area *t) {
-//     int same = 0;
-//     // check l in t
-//     switch (l->type) {
-//         case LINEX:
-//             if (t->type == LINEX) {
-//                 same = (l->ldx == t->ldx) && (l->ldy == t->ldy);
-//             }
-//             if (t->type == AREA) {
-//                 same = (l->ldx == t->ldx) && ((l->ldy == t->ldy) || (l->ldy == (t->ldy + t->h)));
-//             }
-//             break;
-//         case LINEY:
-//             if (t->type == LINEY) {
-//                 same = (l->ldx == t->ldx) && (l->ldy == t->ldy);
-//             }
-//             if (t->type == AREA) {
-//                 same = (l->ldy == t->ldy) && ((l->ldx == t->ldx) || (l->ldx == (t->ldx + t->w)));
-//             }
-//             break;
-//         case POINT:
-//             if (t->type == LINEX) {
-//                 same = (l->ldy == t->ldy) && ((l->ldx == t->ldx) || (l->ldx == (t->ldx + t->w)));
-//             }
-//             if (t->type == LINEY) {
-//                 same = (l->ldx == t->ldx) && ((l->ldy == t->ldy) || (l->ldy == (t->ldy + t->h)));
-//             }
-//             if (t->type == AREA) {
-//                 same = ((l->ldx == t->ldx) && (l->ldy == t->ldy)) ||
-//                        ((l->ldx == t->ldx) && (l->ldy == (t->ldy + t->h))) ||
-//                        ((l->ldx == (t->ldx + t->w)) && (l->ldy == t->ldy)) ||
-//                        ((l->ldx == (t->ldx + t->w)) && (l->ldy == (t->ldy + t->h)));
-//             }
-//             break;
-//         default:
-//             assert("error type area");
-//             break;
-//     }
-//     return same;
-// }
+static inline int
+check_area_same(IntList *list, int l, int t) {
+    int same = 0;
+    // check l in t
+    int l_type = il_get(list, l, enum_TYPE);
+    int l_ldx = il_get(list, l, enum_LDX);
+    int l_ldy = il_get(list, l, enum_LDY);
+    int t_type = il_get(list, t, enum_TYPE);
+    int t_ldx = il_get(list, t, enum_LDX);
+    int t_ldy = il_get(list, t, enum_LDY);
+    int t_w = il_get(list, t, enum_W);
+    int t_h = il_get(list, t, enum_H);
+    switch (l_type) {
+        case LINEX:
+            if (t_type == LINEX) {
+                same = (l_ldx == t_ldx) && (l_ldy == t_ldy);
+            }
+            if (t_type == AREA) {
+                same = (l_ldx == t_ldx) && ((l_ldy == t_ldy) || (l_ldy == (t_ldy + t_h)));
+            }
+            break;
+        case LINEY:
+            if (t_type == LINEY) {
+                same = (l_ldx == t_ldx) && (l_ldy == t_ldy);
+            }
+            if (t_type == AREA) {
+                same = (l_ldy == t_ldy) && ((l_ldx == t_ldx) || (l_ldx == (t_ldx + t_w)));
+            }
+            break;
+        case POINT:
+            if (t_type == LINEX) {
+                same = (l_ldy == t_ldy) && ((l_ldx == t_ldx) || (l_ldx == (t_ldx + t_w)));
+            }
+            if (t_type == LINEY) {
+                same = (l_ldx == t_ldx) && ((l_ldy == t_ldy) || (l_ldy == (t_ldy + t_h)));
+            }
+            if (t_type == AREA) {
+                same = ((l_ldx == t_ldx) && (l_ldy == t_ldy)) ||
+                       ((l_ldx == t_ldx) && (l_ldy == (t_ldy + t_h))) ||
+                       ((l_ldx == (t_ldx + t_w)) && (l_ldy == t_ldy)) ||
+                       ((l_ldx == (t_ldx + t_w)) && (l_ldy == (t_ldy + t_h)));
+            }
+            break;
+        default:
+            assert("error type area");
+            break;
+    }
+    return same;
+}
 
-// static inline void
-// merge_left_area(struct head_left *hl) {
-//     struct left_area *l = hl->l, *temp;
-//     while (l != NULL) {
-//         if (l->type != AREA) {
-//             temp = hl->l;
-//             while (temp != NULL) {
-//                 if (temp != l && (temp->mark == 0)) {
-//                     if (check_area_same(l, temp)) {
-//                         l->mark = 1;
-//                         break;
-//                     }
-//                 }
-//                 temp = temp->next;
-//             }
-//         }
-//         l = l->next;
-//     }
-//     while (hl->l != NULL && hl->l->mark == 1) {
-//         temp = hl->l;
-//         hl->l = hl->l->next;
-//         hl->num--;
-//         hl->total_area -= temp->area;
-//         free(temp);
-//     }
-//     if (hl->l != NULL) {
-//         l = hl->l;
-//         temp = l->next;
-//         while (temp != NULL) {
-//             if (temp->mark == 1) {
-//                 l->next = temp->next;
-//                 hl->total_area -= temp->area;
-//                 hl->num--;
-//                 free(temp);
-//                 temp = l->next;
-//             } else {
-//                 l = l->next;
-//                 temp = l->next;
-//             }
-//         }
-//     }
-// }
+static inline void
+merge_left_area(struct head_left *hl) {
+    for (int i = 0; i < hl->num; i++) {
+        if (il_get(hl->l, i, enum_TYPE) != AREA) {
+            for (int j = 0; j < hl->num; j++) {
+                if (i != j && il_get(hl->l, i, enum_MARK) == 0) {
+                    if (check_area_same(hl->l, i, j)) {
+                        il_set(hl->l, i, enum_MARK, 1);
+                        hl->total_area -= il_get(hl->l, i, enum_AREA);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
 
 int
 rand_place(struct map *m, int w, int h) {
@@ -421,20 +405,21 @@ rand_place(struct map *m, int w, int h) {
     int find = 0;
     if (hl->num > 0 && hl->total_area > 0) {
         int r = rand() % hl->total_area + 1;
-        int total = 0; int num = 0;
+        int total = 0;
         int ldx, ldy, rw, rh;
         for (int i = 0; i < hl->num; i++) {
-            total += il_get(hl->l, i, enum_AREA);
-            num++;
-            if (r <= total) {
-                ldx = il_get(hl->l, i, enum_LDX);
-                ldy = il_get(hl->l, i, enum_LDY);
-                rw = il_get(hl->l, i, enum_W);
-                rh = il_get(hl->l, i, enum_H);
-                m->place[0] = ldx + rand() % (rw + 1);
-                m->place[1] = ldy + rand() % (rh + 1);
-                find = 1;
-                break;
+            if (il_get(hl->l, i, enum_MARK) == 0) {
+                total += il_get(hl->l, i, enum_AREA);
+                if (r <= total) {
+                    ldx = il_get(hl->l, i, enum_LDX);
+                    ldy = il_get(hl->l, i, enum_LDY);
+                    rw = il_get(hl->l, i, enum_W);
+                    rh = il_get(hl->l, i, enum_H);
+                    m->place[0] = ldx + rand() % (rw + 1);
+                    m->place[1] = ldy + rand() % (rh + 1);
+                    find = 1;
+                    break;
+                }
             }
         }
     }
