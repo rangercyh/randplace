@@ -353,7 +353,7 @@ check_area_same(IntList *list, int l, int t) {
             }
             break;
         default:
-            assert("error type area");
+            assert(false);
             break;
     }
     return same;
