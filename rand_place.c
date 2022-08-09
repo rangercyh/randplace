@@ -226,10 +226,15 @@ check_area(struct head_left *hl, struct map *m, int w_span, int h_span,
                 type[POINT] = 0;
             }
         }
+        if (!type[AREA] && !type[LINEX] && !type[LINEY] && !type[POINT]) {
+            break;
+        }
         r = r->next;
     }
-    // check bound
-    check_bound(m->p, type, w_span, h_span, x, y, w, h);
+    if (type[AREA] | type[LINEX] | type[LINEY] | type[POINT]) {
+        // check bound
+        check_bound(m->p, type, w_span, h_span, x, y, w, h);
+    }
 
     if (type[AREA] == 1) {
         add_left_area(hl, x, y, w, h, AREA);
