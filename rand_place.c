@@ -353,7 +353,7 @@ check_area_same(IntList *list, int l, int t) {
             }
             break;
         default:
-            assert(false);
+            assert(0);
             break;
     }
     return same;
