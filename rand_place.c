@@ -12,13 +12,13 @@
 #endif
 
 typedef enum {
-    NONE = -1,
-    AREA,
-    LINEX,
-    LINEY,
-    POINT,
+    NONE_TYPE = 0,
+    AREA = 0x08,
+    LINEX = 0x04,
+    LINEY = 0x02,
+    POINT = 0x01,
 
-    ALL_TYPE
+    ALL_TYPE = 0x0f
 } AREA_TYPE;
 
 enum {
@@ -127,19 +127,27 @@ get_coord(struct coord *x_coord, struct coord *y_coord, struct map *m, int w, in
         if ((p[0] - w) > m->p[0]) {
             insert_coord(x_coord, p[0] - w);
         }
-        insert_coord(x_coord, p[0]);
+        if (p[0] > m->p[0]) {
+            insert_coord(x_coord, p[0]);
+        }
         insert_coord(x_coord, p[6]);
         if ((p[1] - h) > m->p[1]) {
             insert_coord(y_coord, p[1] - h);
         }
-        insert_coord(y_coord, p[1]);
+        if (p[1] > m->p[1]) {
+            insert_coord(y_coord, p[1]);
+        }
         insert_coord(y_coord, p[7]);
         list = list->next;
     }
     p = m->p;
-    insert_coord(x_coord, p[6] - w);
+    if ((p[6] - w) > p[0]) {
+        insert_coord(x_coord, p[6] - w);
+    }
     insert_coord(x_coord, p[6]);
-    insert_coord(y_coord, p[7] - h);
+    if ((p[7] - h) > p[1]) {
+        insert_coord(y_coord, p[7] - h);
+    }
     insert_coord(y_coord, p[7]);
 }
 
@@ -156,17 +164,17 @@ add_left_area(struct head_left *hl, int x, int y, int temp_w,
         case AREA:
             il_set(hl->l, pos, enum_W, temp_w);
             il_set(hl->l, pos, enum_H, temp_h);
-            area = temp_w * temp_h * 10;
+            area = (temp_w + 1) * (temp_h + 1);
             break;
         case LINEX:
             il_set(hl->l, pos, enum_W, temp_w);
             il_set(hl->l, pos, enum_H, 0);
-            area = temp_w;
+            area = temp_w + 1;
             break;
         case LINEY:
             il_set(hl->l, pos, enum_W, 0);
             il_set(hl->l, pos, enum_H, temp_h);
-            area = temp_h;
+            area = temp_h + 1;
             break;
         case POINT:
             il_set(hl->l, pos, enum_W, 0);
@@ -186,71 +194,86 @@ check_bound(int *p, AREA_TYPE *t, int w_span, int h_span, int x, int y, int w, i
     int up[4] = { p[0], p[7] - h_span, p[6], p[7] };
     int right[4] = { p[6] - w_span, p[1], p[6], p[7] };
     if (x >= up[0] && (x + w) <= up[2] && y >= up[1] && (y + h) <= up[3]) {
-        t[AREA] = 0;
-        t[LINEY] = 0;
+        *t &= ~AREA;
+        *t &= ~LINEY;
         if (y != up[1]) {
-            t[LINEX] = 0;
-            t[POINT] = 0;
+            *t &= ~LINEX;
+            *t &= ~POINT;
         }
     }
     if (x >= right[0] && (x + w) <= right[2] && y >= right[1] && (y + h) <= right[3]) {
-        t[AREA] = 0;
-        t[LINEX] = 0;
+        *t &= ~AREA;
+        *t &= ~LINEX;
         if (x != right[0]) {
-            t[LINEY] = 0;
-            t[POINT] = 0;
+            *t &= ~LINEY;
+            *t &= ~POINT;
         }
     }
 }
 
-static inline void
+static inline AREA_TYPE
 check_area(struct head_left *hl, struct map *m, int w_span, int h_span,
-        int x, int y, int w, int h) {
-    DEBUG_PRINT("============== check_area (%d,%d,%d,%d)\n", x, y, w, h);
+        int x, int y, int w, int h, int l_area, int d_area, int ld_area) {
+    DEBUG_PRINT("============== check_area (%d,%d,%d,%d) l,d,ld(%d,%d,%d)\n",
+        x, y, w, h, l_area, d_area, ld_area);
     struct rect *r = m->holes;
-    AREA_TYPE type[ALL_TYPE] = { 1, 1, 1, 1 };
+    AREA_TYPE type = ALL_TYPE;
     int check_x_line;
     int check_y_line;
     while (r != NULL) {
         if (check_in_area(r->p, w_span, h_span, x, y, w, h)) {
-            type[AREA] = 0;
+            type &= ~AREA;
             check_x_line = x - (r->p[0] - w_span);
             if (check_x_line != 0) {
-                type[LINEY] = 0;
+                type &= ~LINEY;
             }
             check_y_line = y - (r->p[1] - h_span);
             if (check_y_line != 0) {
-                type[LINEX] = 0;
+                type &= ~LINEX;
             }
             if (check_x_line != 0 && check_y_line != 0) {
-                type[POINT] = 0;
+                return NONE_TYPE;
             }
-        }
-        if (!type[AREA] && !type[LINEX] && !type[LINEY] && !type[POINT]) {
-            break;
         }
         r = r->next;
     }
-    if (type[AREA] | type[LINEX] | type[LINEY] | type[POINT]) {
-        // check bound
-        check_bound(m->p, type, w_span, h_span, x, y, w, h);
+
+    // check bound
+    check_bound(m->p, &type, w_span, h_span, x, y, w, h);
+    DEBUG_PRINT("type check (%d)\n", type);
+    if (type == NONE_TYPE) {
+        return NONE_TYPE;
     }
 
-    if (type[AREA] == 1) {
+    if (type & AREA) {
         add_left_area(hl, x, y, w, h, AREA);
-        return;
-    }
-    if (type[LINEX] == 1 || type[LINEY] == 1) {
-        if (type[LINEX] == 1) {
-            add_left_area(hl, x, y, w, h, LINEX);
+        return AREA;
+    } else {
+        if (type & LINEY || type & LINEX) {
+            if (type & LINEY) {
+                if (l_area == AREA) {
+                    return NONE_TYPE;
+                }
+                add_left_area(hl, x, y, w, h, LINEY);
+            }
+            if (type & LINEX) {
+                if (d_area == AREA) {
+                    return NONE_TYPE;
+                }
+                add_left_area(hl, x, y, w, h, LINEX);
+            }
+            return type & ~POINT;
         }
-        if (type[LINEY] == 1) {
-            add_left_area(hl, x, y, w, h, LINEY);
+        if (type & POINT) {
+            if ((l_area == AREA || l_area & LINEX || l_area & LINEY) ||
+                (d_area == AREA || d_area & LINEY) ||
+                (ld_area == AREA)) {
+                return NONE_TYPE;
+            }
+            add_left_area(hl, x, y, w, h, POINT);
+            return POINT;
         }
-        return;
-    }
-    if (type[POINT] == 1) {
-        add_left_area(hl, x, y, w, h, POINT);
+        return NONE_TYPE;
     }
 }
 
@@ -273,17 +296,24 @@ get_left_area(struct head_left *hl, struct map *m, int w, int h,
     int lastx = m->p[0];
     int lasty = m->p[1];
     int temp_w, temp_h;
+    AREA_TYPE d_area = NONE_TYPE;
+    AREA_TYPE pre_y_area[y_coord->num];
+    AREA_TYPE ld_area = NONE_TYPE;
+    for (int k = 0; k < y_coord->num; k++) {
+        pre_y_area[k] = NONE_TYPE;
+    }
     for (int i = 0; i < x_coord->num; i++) {
         temp_w = x_coord->c[i] - lastx;
-        if (temp_w > 0) {
-            for (int j = 0; j < y_coord->num; j++) {
-                temp_h = y_coord->c[j] - lasty;
-                if (temp_h > 0) {
-                    check_area(hl, m, w, h, lastx, lasty, temp_w, temp_h);
-                }
-                lasty = y_coord->c[j];
-            }
+        for (int j = 0; j < y_coord->num; j++) {
+            temp_h = y_coord->c[j] - lasty;
+            d_area = check_area(hl, m, w, h, lastx, lasty, temp_w, temp_h,
+                pre_y_area[j], d_area, (j > 0 ? ld_area : NONE_TYPE));
+            DEBUG_PRINT("check_area result ====%d\n", d_area);
+            ld_area = pre_y_area[j];
+            pre_y_area[j] = d_area;
+            lasty = y_coord->c[j];
         }
+        d_area = NONE_TYPE;
         lastx = x_coord->c[i];
         lasty = m->p[1];
     }
@@ -314,73 +344,6 @@ release_resource(struct coord *x, struct coord *y, struct head_left *hl) {
     free(y);
 }
 
-static inline int
-check_area_same(IntList *list, int l, int t) {
-    int same = 0;
-    // check l in t
-    int l_type = il_get(list, l, enum_TYPE);
-    int l_ldx = il_get(list, l, enum_LDX);
-    int l_ldy = il_get(list, l, enum_LDY);
-    int t_type = il_get(list, t, enum_TYPE);
-    int t_ldx = il_get(list, t, enum_LDX);
-    int t_ldy = il_get(list, t, enum_LDY);
-    int t_w = il_get(list, t, enum_W);
-    int t_h = il_get(list, t, enum_H);
-    switch (l_type) {
-        case LINEX:
-            if (t_type == LINEX) {
-                same = (l_ldx == t_ldx) && (l_ldy == t_ldy);
-            }
-            if (t_type == AREA) {
-                same = (l_ldx == t_ldx) && ((l_ldy == t_ldy) || (l_ldy == (t_ldy + t_h)));
-            }
-            break;
-        case LINEY:
-            if (t_type == LINEY) {
-                same = (l_ldx == t_ldx) && (l_ldy == t_ldy);
-            }
-            if (t_type == AREA) {
-                same = (l_ldy == t_ldy) && ((l_ldx == t_ldx) || (l_ldx == (t_ldx + t_w)));
-            }
-            break;
-        case POINT:
-            if (t_type == LINEX) {
-                same = (l_ldy == t_ldy) && ((l_ldx == t_ldx) || (l_ldx == (t_ldx + t_w)));
-            }
-            if (t_type == LINEY) {
-                same = (l_ldx == t_ldx) && ((l_ldy == t_ldy) || (l_ldy == (t_ldy + t_h)));
-            }
-            if (t_type == AREA) {
-                same = ((l_ldx == t_ldx) && (l_ldy == t_ldy)) ||
-                       ((l_ldx == t_ldx) && (l_ldy == (t_ldy + t_h))) ||
-                       ((l_ldx == (t_ldx + t_w)) && (l_ldy == t_ldy)) ||
-                       ((l_ldx == (t_ldx + t_w)) && (l_ldy == (t_ldy + t_h)));
-            }
-            break;
-        default:
-            assert(0);
-            break;
-    }
-    return same;
-}
-
-static inline void
-merge_left_area(struct head_left *hl) {
-    for (int i = 0; i < hl->num; i++) {
-        if (il_get(hl->l, i, enum_TYPE) != AREA) {
-            for (int j = 0; j < hl->num; j++) {
-                if (i != j && il_get(hl->l, i, enum_MARK) == 0) {
-                    if (check_area_same(hl->l, i, j)) {
-                        il_set(hl->l, i, enum_MARK, 1);
-                        hl->total_area -= il_get(hl->l, i, enum_AREA);
-                        break;
-                    }
-                }
-            }
-        }
-    }
-}
-
 int
 rand_place(struct map *m, int w, int h) {
     assert(w > 0 && h > 0);
@@ -403,9 +366,6 @@ rand_place(struct map *m, int w, int h) {
     il_create(hl->l, enum_Num);
     get_left_area(hl, m, w, h, x_coord, y_coord);
     print_left_area(hl);
-
-    // merge_left_area(hl);
-    // print_left_area(hl);
 
     int find = 0;
     if (hl->num > 0 && hl->total_area > 0) {

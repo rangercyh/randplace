@@ -5,7 +5,7 @@ INC = -I. -I/usr/local/include
 CC_FLAGS = $(CFLAG)
 
 CC = gcc
-CC_FLAGS += -O2 -fPIC $(INC) -Wall -Wextra -c
+CC_FLAGS += -O2 -std=c99 -fPIC $(INC) -Wall -Wextra -c
 
 SRC_C   = $(foreach dir, $(SRC), $(wildcard $(dir)/*.c))
 OBJ_C   = $(patsubst %.c, %.o, $(SRC_C))
