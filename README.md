@@ -8,4 +8,6 @@
 
 yum install python3 graphviz
 
+# ref
 
+[矩形挖洞均匀随机算法](https://rangercyh.github.io/2022/08/randplace.html)
