@@ -54,9 +54,10 @@ calc_rect_pos(int *p, int x, int y, int w, int h) {
 }
 
 static inline struct rect *
-create_rect(int x, int y, int w, int h) {
+create_rect(int x, int y, int w, int h, int idx) {
     struct rect *r = (struct rect *)malloc(sizeof(struct rect));
     calc_rect_pos(r->p, x, y, w, h);
+    r->idx = idx;
     r->next = NULL;
     return r;
 }
@@ -68,6 +69,7 @@ create_map(int x, int y, int w, int h) {
     calc_rect_pos(m->p, x, y, w, h);
     m->holes = NULL;
     m->hole_num = 0;
+    m->idx = 0;
     m->place[0] = m->place[1] = 0;
     m->w = w;
     m->h = h;
@@ -89,15 +91,33 @@ dig_hole(struct map *m, int x, int y, int w, int h) {
     }
     struct rect *list = m->holes;
     if (list == NULL) {
-        m->holes = create_rect(x, y, w, h);
+        m->holes = create_rect(x, y, w, h, ++m->idx);
     } else {
         while (list->next != NULL) {
             list = list->next;
         }
-        list->next = create_rect(x, y, w, h);
+        list->next = create_rect(x, y, w, h, ++m->idx);
     }
     m->hole_num++;
-    return 1;
+    return m->idx;
+}
+
+int
+del_hole(struct map *m, int idx) {
+    struct rect **list = &m->holes;
+    struct rect *temp;
+    while (*list) {
+        temp = *list;
+        if (temp->idx == idx) {
+            *list = temp->next;
+            free(temp);
+            m->hole_num--;
+            return 1;
+        } else {
+            list = &temp->next;
+        }
+    }
+    return 0;
 }
 
 static inline void

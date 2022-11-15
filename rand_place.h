@@ -7,6 +7,7 @@
 #define RECT_POS 4
 
 struct rect {
+    int idx;
     int p[RECT_POS * COORD]; // ldx ldy, ltx lty, rdx rdy, rtx rty
     struct rect *next;
 };
@@ -17,6 +18,7 @@ struct map {
     int hole_num;
     int w; int h;
 
+    int idx;
     int place[COORD];   // rand_place result x,y
 };
 
@@ -26,6 +28,9 @@ create_map(int x, int y, int w, int h);
 
 int
 dig_hole(struct map *m, int x, int y, int w, int h);
+
+int
+del_hole(struct map *m, int idx);
 
 int
 rand_place(struct map *m, int w, int h);

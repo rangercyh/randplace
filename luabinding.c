@@ -19,6 +19,14 @@ ldighole(lua_State *L) {
 }
 
 static int
+ldelhole(lua_State *L) {
+    int idx = luaL_checkinteger(L, 2);
+    lua_getiuservalue(L, 1, 1);
+    lua_pushinteger(L, del_hole(lua_touserdata(L, -1), idx));
+    return 1;
+}
+
+static int
 lrandplace(lua_State *L) {
     int w = luaL_checkinteger(L, 2);
     int h = luaL_checkinteger(L, 3);
@@ -50,6 +58,7 @@ lmetatable(lua_State *L) {
     if (luaL_newmetatable(L, MT_NAME)) {
         luaL_Reg l[] = {
             {"dighole", ldighole},
+            {"delhole", ldelhole},
             {"randplace", lrandplace},
             { NULL, NULL }
         };
