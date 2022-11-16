@@ -89,15 +89,9 @@ dig_hole(struct map *m, int x, int y, int w, int h) {
     if (!check_in_area(m->p, 0, 0, x, y, w, h)) {
         return 0;
     }
-    struct rect *list = m->holes;
-    if (list == NULL) {
-        m->holes = create_rect(x, y, w, h, ++m->idx);
-    } else {
-        while (list->next != NULL) {
-            list = list->next;
-        }
-        list->next = create_rect(x, y, w, h, ++m->idx);
-    }
+    struct rect *t = create_rect(x, y, w, h, ++m->idx);
+    t->next = m->holes;
+    m->holes = t;
     m->hole_num++;
     return m->idx;
 }
