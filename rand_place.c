@@ -376,8 +376,7 @@ rand_place(struct map *m, int w, int h) {
     struct head_left *hl = (struct head_left *)malloc(sizeof(struct head_left));
     hl->total_area = 0;
     hl->num = 0;
-    hl->l = (IntList *)malloc(sizeof(IntList));
-    il_create(hl->l, enum_Num);
+    hl->l = il_create(enum_Num);
     get_left_area(hl, m, w, h, x_coord, y_coord);
     print_left_area(hl);
 
